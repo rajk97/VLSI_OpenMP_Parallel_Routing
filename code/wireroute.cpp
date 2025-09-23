@@ -16,6 +16,18 @@
 #include <unistd.h>
 #include <omp.h>
 
+// Function to generate all possible paths for a wire
+
+vector<Route> enumerate_candidates(Wire w){
+
+  vector <Route> routes; 
+
+  // Three types of paths possible: 
+  // Direct path (no bends)
+  routes.push_back({w.start, })
+
+}
+
 void print_stats(const std::vector<std::vector<int>>& occupancy) {
   int max_occupancy = 0;
   long long total_cost = 0;
@@ -174,6 +186,20 @@ int main(int argc, char *argv[]) {
    * Don't use global variables.
    * Use OpenMP to parallelize the algorithm. 
    */
+
+  //  The following is a only single threaded implmentation without using OpenMP principles 
+
+  // Start with wire 1, generate all possible paths, pick the one with least cost 
+  // Access the first wire
+  Wire& first_wire = wires[0];
+
+  // Example: Print the start and end points of the first wire
+  std::cout << "First wire starts at (" << first_wire.start_x << ", " << first_wire.start_y << ") "
+        << "and ends at (" << first_wire.end_x << ", " << first_wire.end_y << ").\n";
+
+  // Generate all possible paths for the first wire 
+
+
 
   const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
   std::cout << "Computation time (sec): " << compute_time << '\n';
