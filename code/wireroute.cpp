@@ -16,16 +16,43 @@
 #include <unistd.h>
 #include <omp.h>
 
+using std::vector;
+
 // Function to generate all possible paths for a wire
 
-vector<Route> enumerate_candidates(Wire w){
+vector<Route> enumerate_candidates(Wire::Point start, Wire::Point end){
 
   vector <Route> routes; 
 
-  // Three types of paths possible: 
-  // Direct path (no bends)
-  routes.push_back({w.start, })
+  // Case 1: Direct path (no bends)
+  // Calculate dx, dy 
+  const int dx = end.x - start.x; 
+  const int dy = end.y - start.y; 
 
+  // Check if there is a direct horizontal/vertical path 
+  if(dx == 0 || dy ==0){
+    routes.emplace_back(start, end); 
+    return routes; 
+  }
+  // Case 2: One bend (L or Z shape)
+
+  // Two possible one-bend routes 
+  // Route 1: Horizontal then Vertical 
+  routes.emplace_back(start, end, std::vector<Wire::Point>{Wire::Point(end.x, start.y)});
+
+  // Route 2: Vertical then Horizontal
+  routes.emplace_back(start, end, std::vector<Wire::Point>{Wire::Point(start.x, end.y)});
+
+  // Case 3: Two bends (U or S shape)
+  for(int x = std::min(start.x, end.x) + 1; x < std::max(start.x, end.x); ++x){
+    routes.emplace_back(start, end, std::vector<Wire::Point>{Wire::Point(x, start.y), Wire::Point(x, end.y)});
+  }
+
+  for(int y = std::min(start.y, end.y) + 1; y < std::max(start.y, end.y); ++y){
+    routes.emplace_back(start, end, std::vector<Wire::Point>{Wire::Point(start.x, y), Wire::Point(end.x, y)});
+  }
+
+  return routes;
 }
 
 void print_stats(const std::vector<std::vector<int>>& occupancy) {
@@ -75,27 +102,30 @@ void write_output(const std::vector<Wire>& wires, const int num_wires, const std
 
   out_wires << dim_x << ' ' << dim_y << '\n' << num_wires << '\n';
 
-  for (const auto& [start_x, start_y, end_x, end_y, bend1_x, bend1_y] : wires) {
-    out_wires << start_x << ' ' << start_y << ' ' << bend1_x << ' ' << bend1_y << ' ';
+  // for (const auto& [start_x, start_y, end_x, end_y, bend1_x, bend1_y] : wires) {
 
-    if (start_y == bend1_y) {
+  for (const auto& wire : wires) {
+    
+    out_wires << wire.start.x << ' ' << wire.start.y << ' ' << wire.bend1.x << ' ' << wire.bend1.y << ' ';
+
+    if (wire.start.y == wire.bend1.y) {
     // first bend was horizontal
 
-      if (end_x != bend1_x) {
+      if (wire.end.x != wire.bend1.x) {
         // two bends
 
-        out_wires << bend1_x << ' ' << end_y << ' ';
+        out_wires << wire.bend1.x << ' ' << wire.end.y << ' ';
       }
-    } else if (start_x == bend1_x) {
+    } else if (wire.start.x == wire.bend1.x) {
       // first bend was vertical
 
-      if(end_y != bend1_y) {
+      if (wire.end.y != wire.bend1.y) {
         // two bends
 
-        out_wires << end_x << ' ' << bend1_y << ' ';
+        out_wires << wire.end.x << ' ' << wire.bend1.y << ' ';
       }
     }
-    out_wires << end_x << ' ' << end_y << '\n';
+    out_wires << wire.end.x << ' ' << wire.end.y << '\n';
   }
 
   out_wires.close();
@@ -167,10 +197,15 @@ int main(int argc, char *argv[]) {
   std::vector<Wire> wires(num_wires);
   std::vector occupancy(dim_y, std::vector<int>(dim_x));
 
+  // for (auto& wire : wires) {
+  //   fin >> wire.start_x >> wire.start_y >> wire.end_x >> wire.end_y;
+  //   wire.bend1_x = wire.start_x;
+  //   wire.bend1_y = wire.start_y;
+  // }
+
   for (auto& wire : wires) {
-    fin >> wire.start_x >> wire.start_y >> wire.end_x >> wire.end_y;
-    wire.bend1_x = wire.start_x;
-    wire.bend1_y = wire.start_y;
+    fin >> wire.start.x >> wire.start.y >> wire.end.x >> wire.end.y;
+    wire.num_bends = 0;  // Initialize with no bends
   }
 
   /* Initialize any additional data structures needed in the algorithm */
@@ -194,8 +229,11 @@ int main(int argc, char *argv[]) {
   Wire& first_wire = wires[0];
 
   // Example: Print the start and end points of the first wire
-  std::cout << "First wire starts at (" << first_wire.start_x << ", " << first_wire.start_y << ") "
-        << "and ends at (" << first_wire.end_x << ", " << first_wire.end_y << ").\n";
+  // std::cout << "First wire starts at (" << first_wire.start_x << ", " << first_wire.start_y << ") "
+  //       << "and ends at (" << first_wire.end_x << ", " << first_wire.end_y << ").\n";
+
+  std::cout << "First wire starts at (" << first_wire.start.x << ", " << first_wire.start.y << ") "
+      << "and ends at (" << first_wire.end.x << ", " << first_wire.end.y << ").\n";
 
   // Generate all possible paths for the first wire 
 
