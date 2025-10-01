@@ -1,0 +1,37 @@
+# Compiled binaries
+wireroute
+test_route
+test_route2
+
+# Object files
+*.o
+
+# Output files
+*_occupancy_*.txt
+*_wires_*.txt
+occupancy_*.txt
+routes_*.txt
+
+# Build artifacts
+*.class
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Performance analysis files
+perf.data*

@@ -11,6 +11,7 @@
 #include <vector>
 #include <array>
 #include <cmath>  // For std::abs
+#include <stdexcept>  // For std::logic_error
 
 #define MAX_PTS_PER_WIRE 4
 #define COST_REPORT_DEPTH 10
@@ -132,6 +133,74 @@ struct Wire {
   validate_wire_t to_validate_format() const;
 };
 
+/**
+ * Route represents a candidate path during optimization phase
+ * Lightweight structure for exploring different routing options
+ */
+struct Route {
+  using Point = Wire::Point;
+  
+  Point start, end;
+  std::vector<Point> bends;
+  
+  Route() = default;
+  Route(Point s, Point e) : start(s), end(e) {}
+  Route(Point s, Point e, std::vector<Point> b) : start(s), end(e), bends(std::move(b)) {}
+  
+  std::vector<Point> getKeyPoints() const {
+    std::vector<Point> points;
+    points.reserve(2 + bends.size());
+    
+    points.push_back(start);
+    for (const auto& bend : bends) {
+      points.push_back(bend);
+    }
+    points.push_back(end);
+    return points;
+  }
+  
+  Wire toWire() const {
+    Wire wire(start, end);
+    wire.num_bends = static_cast<uint8_t>(std::min(bends.size(), size_t(2)));
+    for (size_t i = 0; i < wire.num_bends; ++i) {
+      wire.bends[i] = bends[i];
+    }
+    return wire;
+  }
+  
+  std::vector<Point> getAllPoints() const {
+    std::vector<Point> points;
+    auto key_points = getKeyPoints();
+    
+    for (size_t i = 1; i < key_points.size(); ++i) {
+      const auto& prev = key_points[i-1];
+      const auto& curr = key_points[i];
+      
+      if (prev.x == curr.x) {
+        // Vertical segment
+        const int step = (curr.y > prev.y) ? 1 : -1;
+        for (int y = prev.y; y != curr.y; y += step) {
+          points.emplace_back(prev.x, y);
+        }
+      } else if (prev.y == curr.y) {
+        // Horizontal segment
+        const int step = (curr.x > prev.x) ? 1 : -1;
+        for (int x = prev.x; x != curr.x; x += step) {
+          points.emplace_back(x, prev.y);
+        }
+      } else {
+        throw std::logic_error("Diagonal segments not allowed in routes");
+      }
+    }
+    
+    // Add final point
+    if (!key_points.empty()) {
+      points.push_back(key_points.back());
+    }
+    
+    return points;
+  }
+};
 
 struct wr_checker {
   std::vector<Wire> wires;

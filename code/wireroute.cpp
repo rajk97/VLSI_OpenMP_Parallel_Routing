@@ -12,6 +12,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <random>
 
 #include <unistd.h>
 #include <omp.h>
@@ -19,6 +20,41 @@
 using std::vector;
 
 // Function to generate all possible paths for a wire
+
+int calculateRouteCost(const Route& route, const std::vector<std::vector<int>>& occupancy){
+  // Get all the points in the route, then do incremental cost calculation 
+
+  auto all_points = route.getAllPoints();
+
+  int incremental_cost = 0; 
+
+  // Loop through all the points, add the incremental cost to the occupancy grid 
+  for(const auto& point: all_points){
+    if(point.x >=0 && point.x < static_cast<int>(occupancy[0].size()) && 
+       point.y >=0 && point.y < static_cast<int>(occupancy.size())){
+      
+        int current_occupancy = occupancy[point.y][point.x];
+
+        int old_cost = current_occupancy * current_occupancy;
+        int new_cost = (current_occupancy + 1) * (current_occupancy + 1);
+        incremental_cost += (new_cost - old_cost);
+    }   
+  }
+
+  return incremental_cost;
+}
+
+void updateOccupancyGrid(const Route& route, std::vector<std::vector<int>>& occupancy){
+    auto all_points = route.getAllPoints();
+
+    for(const auto& point : all_points){
+        if(point.x >= 0 && point.x < static_cast<int>(occupancy[0].size()) && 
+            point.y >= 0 && point.y < static_cast<int>(occupancy.size())) {
+            occupancy[point.y][point.x]++;
+        }
+    }
+    return; 
+}
 
 vector<Route> enumerate_candidates(Wire::Point start, Wire::Point end){
 
@@ -71,12 +107,17 @@ void print_stats(const std::vector<std::vector<int>>& occupancy) {
 }
 
 void write_output(const std::vector<Wire>& wires, const int num_wires, const std::vector<std::vector<int>>& occupancy, const int dim_x, const int dim_y, const int num_threads, std::string input_filename) {
+  // Extract just the filename without path and extension
+  size_t last_slash = input_filename.find_last_of("/\\");
+  if (last_slash != std::string::npos) {
+    input_filename = input_filename.substr(last_slash + 1);
+  }
   if (std::size(input_filename) >= 4 && input_filename.substr(std::size(input_filename) - 4) == ".txt") {
     input_filename.resize(std::size(input_filename) - 4);
   }
 
-  const std::string occupancy_filename = input_filename + "_occupancy_" + std::to_string(num_threads) + ".txt";
-  const std::string wires_filename = input_filename + "_wires_" + std::to_string(num_threads) + ".txt";
+  const std::string occupancy_filename = "occupancy_" + input_filename + "_" + std::to_string(num_threads) + ".txt";
+  const std::string wires_filename = "routes_" + input_filename + "_" + std::to_string(num_threads) + ".txt";
 
   std::ofstream out_occupancy(occupancy_filename, std::fstream::out);
   if (!out_occupancy) {
@@ -105,27 +146,16 @@ void write_output(const std::vector<Wire>& wires, const int num_wires, const std
   // for (const auto& [start_x, start_y, end_x, end_y, bend1_x, bend1_y] : wires) {
 
   for (const auto& wire : wires) {
+    // Write all route points for this wire
+    auto route_points = wire.getRoutePoints();
     
-    out_wires << wire.start.x << ' ' << wire.start.y << ' ' << wire.bend1.x << ' ' << wire.bend1.y << ' ';
-
-    if (wire.start.y == wire.bend1.y) {
-    // first bend was horizontal
-
-      if (wire.end.x != wire.bend1.x) {
-        // two bends
-
-        out_wires << wire.bend1.x << ' ' << wire.end.y << ' ';
-      }
-    } else if (wire.start.x == wire.bend1.x) {
-      // first bend was vertical
-
-      if (wire.end.y != wire.bend1.y) {
-        // two bends
-
-        out_wires << wire.end.x << ' ' << wire.bend1.y << ' ';
+    for (size_t i = 0; i < route_points.size(); ++i) {
+      out_wires << route_points[i].x << ' ' << route_points[i].y;
+      if (i < route_points.size() - 1) {
+        out_wires << ' ';
       }
     }
-    out_wires << wire.end.x << ' ' << wire.end.y << '\n';
+    out_wires << '\n';
   }
 
   out_wires.close();
@@ -222,21 +252,90 @@ int main(int argc, char *argv[]) {
    * Use OpenMP to parallelize the algorithm. 
    */
 
-  //  The following is a only single threaded implmentation without using OpenMP principles 
+  // Single-threaded implementation with simulated annealing as per assignment
 
-  // Start with wire 1, generate all possible paths, pick the one with least cost 
-  // Access the first wire
-  Wire& first_wire = wires[0];
+  // Phase 1: Initial greedy wire placement
+  std::cout << "Phase 1: Initial wire placement..." << std::endl;
+  
+  for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx){
+    auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
-  // Example: Print the start and end points of the first wire
-  // std::cout << "First wire starts at (" << first_wire.start_x << ", " << first_wire.start_y << ") "
-  //       << "and ends at (" << first_wire.end_x << ", " << first_wire.end_y << ").\n";
+    Route best_route = candidates[0];
+    int min_cost = calculateRouteCost(best_route, occupancy);
 
-  std::cout << "First wire starts at (" << first_wire.start.x << ", " << first_wire.start.y << ") "
-      << "and ends at (" << first_wire.end.x << ", " << first_wire.end.y << ").\n";
+    for(size_t i = 1; i < candidates.size(); ++i){
+      int cost = calculateRouteCost(candidates[i], occupancy);
+      if(cost < min_cost){
+        min_cost = cost; 
+        best_route = candidates[i];
+      }
+    }
 
-  // Generate all possible paths for the first wire 
+    wires[wire_idx] = best_route.toWire();
+    updateOccupancyGrid(best_route, occupancy);
 
+    if(wire_idx % 100 == 0){
+      std::cout << "Initial placement: wire " << wire_idx << "/" << wires.size() << std::endl; 
+    }
+  }
+
+  // Phase 2: Simulated annealing iterations
+  std::cout << "Phase 2: Simulated annealing iterations..." << std::endl;
+  
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> prob_dist(0.0, 1.0);
+  
+  for(int iter = 0; iter < SA_iters; ++iter) {
+    std::cout << "SA Iteration " << (iter + 1) << "/" << SA_iters << std::endl;
+    
+    for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx) {
+      // Remove current wire from occupancy matrix
+      Route current_route(wires[wire_idx].start, wires[wire_idx].end);
+      for(uint8_t i = 0; i < wires[wire_idx].num_bends; ++i) {
+        current_route.bends.push_back(wires[wire_idx].bends[i]);
+      }
+      
+      // Remove current wire's contribution to occupancy
+      auto current_points = current_route.getAllPoints();
+      for(const auto& point : current_points) {
+        if(point.x >= 0 && point.x < static_cast<int>(occupancy[0].size()) && 
+           point.y >= 0 && point.y < static_cast<int>(occupancy.size())) {
+          occupancy[point.y][point.x]--;
+        }
+      }
+      
+      // Generate all possible routes
+      auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
+      
+      Route selected_route = candidates[0];
+      
+      // Find best route
+      int min_cost = calculateRouteCost(candidates[0], occupancy);
+      Route best_route = candidates[0];
+      
+      for(size_t i = 1; i < candidates.size(); ++i) {
+        int cost = calculateRouteCost(candidates[i], occupancy);
+        if(cost < min_cost) {
+          min_cost = cost;
+          best_route = candidates[i];
+        }
+      }
+      
+      // Simulated annealing: choose random route with probability SA_prob
+      if(candidates.size() > 1 && prob_dist(gen) < SA_prob) {
+        std::uniform_int_distribution<> route_dist(0, candidates.size() - 1);
+        selected_route = candidates[route_dist(gen)];
+      } else {
+        selected_route = best_route;
+      }
+      
+      // Update wire and occupancy with selected route
+      wires[wire_idx] = selected_route.toWire();
+      updateOccupancyGrid(selected_route, occupancy);
+    }
+  }
+  
 
 
   const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
@@ -248,8 +347,17 @@ int main(int argc, char *argv[]) {
   write_output(wires, num_wires, occupancy, dim_x, dim_y, num_threads, input_filename);
 }
 
-validate_wire_t Wire::to_validate_format(void) const {
-  /* TODO(student): Implement this if you want to use the wr_checker. */
-  /* See wireroute.h for details on validate_wire_t. */
-  throw std::logic_error("to_validate_format not implemented.");
+validate_wire_t Wire::to_validate_format() const {
+  validate_wire_t result;
+  auto route_points = getRoutePoints();
+  
+  result.num_pts = static_cast<uint8_t>(std::min(route_points.size(), 
+                                                 static_cast<size_t>(MAX_PTS_PER_WIRE)));
+  
+  for (size_t i = 0; i < result.num_pts; ++i) {
+    result.p[i].x = static_cast<uint16_t>(route_points[i].x);
+    result.p[i].y = static_cast<uint16_t>(route_points[i].y);
+  }
+  
+  return result;
 }
