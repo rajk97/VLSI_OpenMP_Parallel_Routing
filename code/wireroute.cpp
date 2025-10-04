@@ -16,6 +16,7 @@
 
 #include <unistd.h>
 #include <omp.h>
+#include <climits>
 
 using std::vector;
 
@@ -210,8 +211,10 @@ int main(int argc, char *argv[]) {
   std::cout << "Input file: " << input_filename << '\n';
   std::cout << "Parallel mode: " << parallel_mode << '\n';
   std::cout << "Batch size: " << batch_size << '\n';
-
+  omp_set_num_threads(num_threads);
   std::ifstream fin(input_filename);
+
+
 
   if (!fin) {
     std::cerr << "Unable to open file: " << input_filename << ".\n";
@@ -263,11 +266,28 @@ int main(int argc, char *argv[]) {
     Route best_route = candidates[0];
     int min_cost = calculateRouteCost(best_route, occupancy);
 
-    for(size_t i = 1; i < candidates.size(); ++i){
-      int cost = calculateRouteCost(candidates[i], occupancy);
-      if(cost < min_cost){
-        min_cost = cost; 
-        best_route = candidates[i];
+    #pragma omp parallel
+    {
+      // Declare thread local variables 
+      int thread_min_cost = min_cost; 
+      Route thread_best_route = candidates[0];
+
+      // Write the thread local best route and cost functions 
+      #pragma omp for nowait
+      for(size_t i = 1; i<candidates.size(); ++i){
+        int cost = calculateRouteCost(candidates[i], occupancy);
+        if(cost < thread_min_cost){
+          thread_min_cost = cost; 
+          thread_best_route = candidates[i];
+        }
+      }
+      // Do a critical section to update the global best route and cost 
+      #pragma omp critical 
+      {
+        if(thread_min_cost < min_cost){
+          min_cost = thread_min_cost; 
+          best_route = thread_best_route; 
+        }
       }
     }
 
@@ -290,6 +310,8 @@ int main(int argc, char *argv[]) {
     std::cout << "SA Iteration " << (iter + 1) << "/" << SA_iters << std::endl;
     
     for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx) {
+      
+      
       // Remove current wire from occupancy matrix
       Route current_route(wires[wire_idx].start, wires[wire_idx].end);
       for(uint8_t i = 0; i < wires[wire_idx].num_bends; ++i) {
@@ -308,31 +330,45 @@ int main(int argc, char *argv[]) {
       // Generate all possible routes
       auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
       
-      Route selected_route = candidates[0];
-      
-      // Find best route
-      int min_cost = calculateRouteCost(candidates[0], occupancy);
       Route best_route = candidates[0];
-      
-      for(size_t i = 1; i < candidates.size(); ++i) {
-        int cost = calculateRouteCost(candidates[i], occupancy);
-        if(cost < min_cost) {
-          min_cost = cost;
-          best_route = candidates[i];
+      int min_cost = calculateRouteCost(best_route, occupancy);
+
+      #pragma omp parallel
+      {
+        // Declare thread local variables 
+        int thread_min_cost = min_cost; 
+        Route thread_best_route = candidates[0];
+
+        // Write the thread local best route and cost functions 
+        #pragma omp for nowait
+        for(size_t i = 1; i<candidates.size(); ++i){
+          int cost = calculateRouteCost(candidates[i], occupancy);
+          if(cost < thread_min_cost){
+            thread_min_cost = cost; 
+            thread_best_route = candidates[i];
+          }
+        }
+        // Do a critical section to update the global best route and cost 
+        #pragma omp critical 
+        {
+          if(thread_min_cost < min_cost){
+            min_cost = thread_min_cost; 
+            best_route = thread_best_route; 
+          }
         }
       }
       
       // Simulated annealing: choose random route with probability SA_prob
       if(candidates.size() > 1 && prob_dist(gen) < SA_prob) {
         std::uniform_int_distribution<> route_dist(0, candidates.size() - 1);
-        selected_route = candidates[route_dist(gen)];
+        best_route = candidates[route_dist(gen)];
       } else {
-        selected_route = best_route;
+        best_route = best_route;
       }
       
       // Update wire and occupancy with selected route
-      wires[wire_idx] = selected_route.toWire();
-      updateOccupancyGrid(selected_route, occupancy);
+      wires[wire_idx] = best_route.toWire();
+      updateOccupancyGrid(best_route, occupancy);
     }
   }
   
