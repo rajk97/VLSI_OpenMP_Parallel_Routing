@@ -1,5 +1,7 @@
 {
+    "window.title": "across_sequential",
     "files.associations": {
+        
         "algorithm": "cpp",
         "iomanip": "cpp",
         "vector": "cpp",
