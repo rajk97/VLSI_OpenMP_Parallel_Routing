@@ -24,34 +24,26 @@ using std::vector;
 int calculateRouteCost(const Route& route, const std::vector<std::vector<int>>& occupancy){
   // Get all the points in the route, then do incremental cost calculation 
 
-  auto all_points = route.getAllPoints();
+  auto all_points = route.getAllPoints(occupancy[0].size(), occupancy.size());
 
   int incremental_cost = 0; 
 
   // Loop through all the points, add the incremental cost to the occupancy grid 
   for(const auto& point: all_points){
-    if(point.x >=0 && point.x < static_cast<int>(occupancy[0].size()) && 
-       point.y >=0 && point.y < static_cast<int>(occupancy.size())){
-      
-        int current_occupancy = occupancy[point.y][point.x];
+    int current_occupancy = occupancy[point.y][point.x];
 
-        int old_cost = current_occupancy * current_occupancy;
-        int new_cost = (current_occupancy + 1) * (current_occupancy + 1);
-        incremental_cost += (new_cost - old_cost);
-    }   
+    int old_cost = current_occupancy * current_occupancy;
+    int new_cost = (current_occupancy + 1) * (current_occupancy + 1);
+    incremental_cost += (new_cost - old_cost);
   }
 
   return incremental_cost;
 }
 
 void updateOccupancyGrid(const Route& route, std::vector<std::vector<int>>& occupancy){
-    auto all_points = route.getAllPoints();
-
+    auto all_points = route.getAllPoints(occupancy[0].size(), occupancy.size());
     for(const auto& point : all_points){
-        if(point.x >= 0 && point.x < static_cast<int>(occupancy[0].size()) && 
-            point.y >= 0 && point.y < static_cast<int>(occupancy.size())) {
-            occupancy[point.y][point.x]++;
-        }
+        occupancy[point.y][point.x]++;
     }
     return; 
 }
@@ -147,7 +139,8 @@ void write_output(const std::vector<Wire>& wires, const int num_wires, const std
 
   for (const auto& wire : wires) {
     // Write all route points for this wire
-    auto route_points = wire.getRoutePoints();
+    // Use route_path if available, otherwise fall back to getRoutePoints()
+    const auto& route_points = wire.route_path.empty() ? wire.getRoutePoints() : wire.route_path;
     
     for (size_t i = 0; i < route_points.size(); ++i) {
       out_wires << route_points[i].x << ' ' << route_points[i].y;
@@ -245,6 +238,7 @@ int main(int argc, char *argv[]) {
 
   const auto compute_start = std::chrono::steady_clock::now();
 
+
   /** 
    * Implement the wire routing algorithm here
    * Feel free to structure the algorithm into different functions
@@ -253,90 +247,131 @@ int main(int argc, char *argv[]) {
    */
 
   // Single-threaded implementation with simulated annealing as per assignment
+  if (parallel_mode == 'A'){
+    //Across WIRE PARALLELIZATION
 
-  // Phase 1: Initial greedy wire placement
-  std::cout << "Phase 1: Initial wire placement..." << std::endl;
-  
-  for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx){
-    auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
+    omp_set_num_threads(num_threads);
 
-    Route best_route = candidates[0];
-    int min_cost = calculateRouteCost(best_route, occupancy);
+    int num_batches = (num_wires + batch_size - 1)/batch_size; 
+    int num_batches_default = num_batches; 
+    int batch_idx = 0; 
 
-    for(size_t i = 1; i < candidates.size(); ++i){
-      int cost = calculateRouteCost(candidates[i], occupancy);
-      if(cost < min_cost){
-        min_cost = cost; 
-        best_route = candidates[i];
+    // Phase 1: Initial placement with batching 
+    #pragma omp parallel
+    {
+      while(batch_idx < num_batches_default){
+
+        // Single thread pipeline 
+        int batch_start, batch_end; 
+
+        // Grab a batch 
+        #pragma omp critical
+        {
+          batch_start = (batch_idx) * batch_size; 
+          batch_idx++;
+          batch_end = std::min(batch_start + batch_size - 1, num_wires - 1);
+        }
+
+        // Phase 1: Find initial routes for wires in this batch 
+        for(int wire_idx = batch_start; wire_idx<=batch_end; wire_idx++){
+          auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
+
+          Route best_route = candidates[0];
+          int min_cost = calculateRouteCost(best_route, occupancy);
+
+          for(size_t i = 1; i < candidates.size(); ++i){
+            int cost = calculateRouteCost(candidates[i], occupancy);
+            if(cost < min_cost){
+              min_cost = cost; 
+              best_route = candidates[i];
+            }
+            
+          }
+          wires[wire_idx].route_path = best_route.getAllPoints(dim_x, dim_y);
+        }
+        // Phase 2: Update the occupancy matrix 
+        for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
+          // Loop through all the points in the route path of the wire 
+          for(const auto& point: wires[wire_idx].route_path){
+            #pragma omp atomic
+              occupancy[point.y][point.x]++;
+          }       
+        }
       }
     }
-
-    wires[wire_idx] = best_route.toWire();
-    updateOccupancyGrid(best_route, occupancy);
-
-    if(wire_idx % 100 == 0){
-      std::cout << "Initial placement: wire " << wire_idx << "/" << wires.size() << std::endl; 
-    }
-  }
-
-  // Phase 2: Simulated annealing iterations
-  std::cout << "Phase 2: Simulated annealing iterations..." << std::endl;
-  
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> prob_dist(0.0, 1.0);
-  
-  for(int iter = 0; iter < SA_iters; ++iter) {
-    std::cout << "SA Iteration " << (iter + 1) << "/" << SA_iters << std::endl;
     
-    for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx) {
-      // Remove current wire from occupancy matrix
-      Route current_route(wires[wire_idx].start, wires[wire_idx].end);
-      for(uint8_t i = 0; i < wires[wire_idx].num_bends; ++i) {
-        current_route.bends.push_back(wires[wire_idx].bends[i]);
-      }
+    
+    for(int iter = 0; iter<SA_iters; ++iter){
       
-      // Remove current wire's contribution to occupancy
-      auto current_points = current_route.getAllPoints();
-      for(const auto& point : current_points) {
-        if(point.x >= 0 && point.x < static_cast<int>(occupancy[0].size()) && 
-           point.y >= 0 && point.y < static_cast<int>(occupancy.size())) {
-          occupancy[point.y][point.x]--;
+      std::cout <<"SA Iteration "<<(iter+1)<<"/"<<SA_iters<<std::endl; 
+
+      // Start Phase 2: Simulated annealing iterations with batching
+      int batch_idx = 0; 
+
+      #pragma omp parallel
+      {
+        std::random_device rd; 
+        std::mt19937 gen(rd() + omp_get_thread_num());
+        std::uniform_real_distribution<> prob_dist(0.0, 1.0);
+
+        while(batch_idx < num_batches_default){
+
+          // Single thread pipeline 
+          int batch_start, batch_end; 
+
+          #pragma omp critical
+          {
+            batch_start = batch_idx * batch_size; 
+            batch_idx++; 
+            batch_end = std::min(batch_start + batch_size - 1, num_wires - 1);
+          }
+          
+          // Phase 0: Remove the current batch routes from occupancy matrix so that each wire in the batch compares against the same matrix 
+          for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
+            for(const auto& point: wires[wire_idx].route_path){
+              #pragma omp atomic 
+              occupancy[point.y][point.x]--;
+            }
+          }
+
+          // Phase 1: Find initial routes for wires in this batch 
+          for(int wire_idx = batch_start; wire_idx<=batch_end; wire_idx++){
+            auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
+
+            Route best_route = candidates[0];
+            int min_cost = calculateRouteCost(best_route, occupancy);
+
+            for(size_t i = 1; i < candidates.size(); ++i){
+              int cost = calculateRouteCost(candidates[i], occupancy);
+              if(cost < min_cost){
+                min_cost = cost; 
+                best_route = candidates[i];
+              }
+              
+            }
+
+            Route selected_route = best_route; 
+            
+            if(candidates.size()>1 && prob_dist(gen) < SA_prob){
+              std::uniform_int_distribution<> route_dist(0, candidates.size()-1); 
+              selected_route = candidates[route_dist(gen)];            
+            }
+
+            wires[wire_idx].route_path = selected_route.getAllPoints(dim_x, dim_y);
+          }
+          
+          // Phase 2: Update the occupancy matrix 
+          for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
+            // Loop through all the points in the route path of the wire 
+            for(const auto& point: wires[wire_idx].route_path){
+              #pragma omp atomic
+                occupancy[point.y][point.x]++;
+            }       
+          }
         }
       }
-      
-      // Generate all possible routes
-      auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
-      
-      Route selected_route = candidates[0];
-      
-      // Find best route
-      int min_cost = calculateRouteCost(candidates[0], occupancy);
-      Route best_route = candidates[0];
-      
-      for(size_t i = 1; i < candidates.size(); ++i) {
-        int cost = calculateRouteCost(candidates[i], occupancy);
-        if(cost < min_cost) {
-          min_cost = cost;
-          best_route = candidates[i];
-        }
-      }
-      
-      // Simulated annealing: choose random route with probability SA_prob
-      if(candidates.size() > 1 && prob_dist(gen) < SA_prob) {
-        std::uniform_int_distribution<> route_dist(0, candidates.size() - 1);
-        selected_route = candidates[route_dist(gen)];
-      } else {
-        selected_route = best_route;
-      }
-      
-      // Update wire and occupancy with selected route
-      wires[wire_idx] = selected_route.toWire();
-      updateOccupancyGrid(selected_route, occupancy);
     }
   }
-  
-
 
   const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
   std::cout << "Computation time (sec): " << compute_time << '\n';

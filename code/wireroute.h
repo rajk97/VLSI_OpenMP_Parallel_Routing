@@ -42,6 +42,9 @@ struct validate_wire_t {
   void print_wire(void) const;
 };
 
+// Forward declaration of Route so Wire can reference it
+struct Route;
+
 struct Wire {
   /** 
    * Point represents a 2D coordinate in the wire routing grid
@@ -68,16 +71,19 @@ struct Wire {
   Point start, end; 
   std::array<Point, 2> bends;  // Up to 2 intermediate bend points
   uint8_t num_bends = 0;       // Number of actual bends used (0, 1, or 2)
+  
+  // Optional: store complete route path (all points from start to end)
+  std::vector<Point> route_path;  // Empty if not computed, otherwise full path
 
   /** 
    * Default constructor creates invalid wire at origin
    */
-  constexpr Wire() = default;
+  Wire() = default;
   
   /**
    * Constructor for straight-line wire (no bends)
    */
-  constexpr Wire(Point start_pt, Point end_pt) 
+  Wire(Point start_pt, Point end_pt) 
     : start(start_pt), end(end_pt), num_bends(0) {}
 
   /**
@@ -88,6 +94,9 @@ struct Wire {
            start.x >= 0 && start.y >= 0 && 
            end.x >= 0 && end.y >= 0; 
   }
+
+
+  
   
   /**
    * Calculate total Manhattan length of the wire route
@@ -168,7 +177,15 @@ struct Route {
     return wire;
   }
   
-  std::vector<Point> getAllPoints() const {
+  std::vector<Point> getAllPoints(int dim_x, int dim_y) const {
+    // Pre-validate: Check if start and end are within occupancy matrix bounds
+    if (start.x < 0 || start.x >= dim_x || start.y < 0 || start.y >= dim_y) {
+      throw std::logic_error("Start point outside occupancy matrix bounds");
+    }
+    if (end.x < 0 || end.x >= dim_x || end.y < 0 || end.y >= dim_y) {
+      throw std::logic_error("End point outside occupancy matrix bounds");
+    }
+        
     std::vector<Point> points;
     auto key_points = getKeyPoints();
     
@@ -179,12 +196,14 @@ struct Route {
       if (prev.x == curr.x) {
         // Vertical segment
         const int step = (curr.y > prev.y) ? 1 : -1;
+        
         for (int y = prev.y; y != curr.y; y += step) {
           points.emplace_back(prev.x, y);
         }
       } else if (prev.y == curr.y) {
         // Horizontal segment
         const int step = (curr.x > prev.x) ? 1 : -1;
+        
         for (int x = prev.x; x != curr.x; x += step) {
           points.emplace_back(x, prev.y);
         }
@@ -193,7 +212,7 @@ struct Route {
       }
     }
     
-    // Add final point
+    // Add final point (already validated via start/end check)
     if (!key_points.empty()) {
       points.push_back(key_points.back());
     }
