@@ -17,11 +17,18 @@
 #include <unistd.h>
 #include <omp.h>
 
+#ifdef TRACY_ENABLE
+#include "/home/raj/Documents/Projects/system_software/tracy/public/tracy/Tracy.hpp"
+#endif
+
 using std::vector;
 
 // Function to generate all possible paths for a wire
 
 int calculateRouteCost(const Route& route, const std::vector<std::vector<int>>& occupancy){
+#ifdef TRACY_ENABLE
+  ZoneScopedN("Calculate Route Cost");
+#endif
   // Get all the points in the route, then do incremental cost calculation 
 
   auto all_points = route.getAllPoints(occupancy[0].size(), occupancy.size());
@@ -49,6 +56,9 @@ void updateOccupancyGrid(const Route& route, std::vector<std::vector<int>>& occu
 }
 
 vector<Route> enumerate_candidates(Wire::Point start, Wire::Point end){
+#ifdef TRACY_ENABLE
+  ZoneScopedN("Enumerate Candidates");
+#endif
 
   vector <Route> routes; 
 
@@ -238,6 +248,9 @@ int main(int argc, char *argv[]) {
 
   const auto compute_start = std::chrono::steady_clock::now();
 
+#ifdef TRACY_ENABLE
+  ZoneScopedN("Main Computation");
+#endif
 
   /** 
    * Implement the wire routing algorithm here
@@ -259,7 +272,13 @@ int main(int argc, char *argv[]) {
     // Phase 1: Initial placement with batching 
     #pragma omp parallel
     {
+#ifdef TRACY_ENABLE
+      ZoneScopedN("Initial Placement - Parallel Region");
+#endif
       while(batch_idx < num_batches_default){
+#ifdef TRACY_ENABLE
+        ZoneScopedN("Initial Placement - Process Batch");
+#endif
 
         // Single thread pipeline 
         int batch_start, batch_end; 
@@ -267,12 +286,19 @@ int main(int argc, char *argv[]) {
         // Grab a batch 
         #pragma omp critical
         {
+#ifdef TRACY_ENABLE
+          ZoneScopedN("Grab Batch - Critical Section");
+#endif
           batch_start = (batch_idx) * batch_size; 
           batch_idx++;
           batch_end = std::min(batch_start + batch_size - 1, num_wires - 1);
         }
 
-        // Phase 1: Find initial routes for wires in this batch 
+        // Phase 1: Find initial routes for wires in this batch
+        {
+#ifdef TRACY_ENABLE
+          ZoneScopedN("Phase 1 - Find Initial Routes");
+#endif 
         for(int wire_idx = batch_start; wire_idx<=batch_end; wire_idx++){
           auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
@@ -289,7 +315,12 @@ int main(int argc, char *argv[]) {
           }
           wires[wire_idx].route_path = best_route.getAllPoints(dim_x, dim_y);
         }
-        // Phase 2: Update the occupancy matrix 
+        }
+        // Phase 2: Update the occupancy matrix
+        {
+#ifdef TRACY_ENABLE
+          ZoneScopedN("Phase 2 - Update Occupancy");
+#endif 
         for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
           // Loop through all the points in the route path of the wire 
           for(const auto& point: wires[wire_idx].route_path){
@@ -297,11 +328,15 @@ int main(int argc, char *argv[]) {
               occupancy[point.y][point.x]++;
           }       
         }
+        }
       }
     }
     
     
     for(int iter = 0; iter<SA_iters; ++iter){
+#ifdef TRACY_ENABLE
+      ZoneScopedN("SA Iteration");
+#endif
       
       std::cout <<"SA Iteration "<<(iter+1)<<"/"<<SA_iters<<std::endl; 
 
@@ -310,31 +345,49 @@ int main(int argc, char *argv[]) {
 
       #pragma omp parallel
       {
+#ifdef TRACY_ENABLE
+        ZoneScopedN("SA - Parallel Region");
+#endif
         std::random_device rd; 
         std::mt19937 gen(rd() + omp_get_thread_num());
         std::uniform_real_distribution<> prob_dist(0.0, 1.0);
 
         while(batch_idx < num_batches_default){
+#ifdef TRACY_ENABLE
+          ZoneScopedN("SA - Process Batch");
+#endif
 
           // Single thread pipeline 
           int batch_start, batch_end; 
 
           #pragma omp critical
           {
+#ifdef TRACY_ENABLE
+            ZoneScopedN("SA - Grab Batch Critical");
+#endif
             batch_start = batch_idx * batch_size; 
             batch_idx++; 
             batch_end = std::min(batch_start + batch_size - 1, num_wires - 1);
           }
           
-          // Phase 0: Remove the current batch routes from occupancy matrix so that each wire in the batch compares against the same matrix 
+          // Phase 0: Remove the current batch routes from occupancy matrix so that each wire in the batch compares against the same matrix
+          {
+#ifdef TRACY_ENABLE
+            ZoneScopedN("Phase 0 - Remove Old Routes");
+#endif 
           for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
             for(const auto& point: wires[wire_idx].route_path){
               #pragma omp atomic 
               occupancy[point.y][point.x]--;
             }
           }
+          }
 
-          // Phase 1: Find initial routes for wires in this batch 
+          // Phase 1: Find initial routes for wires in this batch
+          {
+#ifdef TRACY_ENABLE
+            ZoneScopedN("Phase 1 - Find New Routes");
+#endif 
           for(int wire_idx = batch_start; wire_idx<=batch_end; wire_idx++){
             auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
@@ -359,14 +412,20 @@ int main(int argc, char *argv[]) {
 
             wires[wire_idx].route_path = selected_route.getAllPoints(dim_x, dim_y);
           }
+          }
           
-          // Phase 2: Update the occupancy matrix 
+          // Phase 2: Update the occupancy matrix
+          {
+#ifdef TRACY_ENABLE
+            ZoneScopedN("Phase 2 - Update Occupancy");
+#endif 
           for(int wire_idx = batch_start; wire_idx<=batch_end; ++wire_idx){
             // Loop through all the points in the route path of the wire 
             for(const auto& point: wires[wire_idx].route_path){
               #pragma omp atomic
                 occupancy[point.y][point.x]++;
             }       
+          }
           }
         }
       }

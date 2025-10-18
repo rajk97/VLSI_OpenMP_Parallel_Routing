@@ -35,3 +35,11 @@ Thumbs.db
 
 # Performance analysis files
 perf.data*
+
+# Tracy profiler files
+*.tracy
+TracyClient.o
+
+# Benchmark logs
+logs/
+benchmark-timings/
