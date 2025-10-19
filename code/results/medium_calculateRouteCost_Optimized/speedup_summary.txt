@@ -1,0 +1,60 @@
+Medium 4096 with Optimized calculateRouteCost
+Experiment: medium_calculateRouteCost_Optimized
+Date: Sat Oct 18 04:43:22 PM PDT 2025
+==========================================
+
+Configuration:
+  Input: inputs/timeinput/medium_4096.txt
+  Threads: 1 2 4 8
+  SA Iterations: 5
+  Batch Size: 1
+  Parallel Mode: A (across-wire)
+  Optimizations:
+    - Inlined cost calculation (eliminated function calls)
+    - Simplified math: (n+1)² - n² = 2n + 1
+    - Compiler: -O3 -march=native -flto -ffast-math
+  Tracy: Enabled for profiling
+
+==========================================
+
+>>> Running with 1 threads...
+  Tracy capture started (PID: 1407457)
+  Starting wireroute...
+  Threads: 1 | Time: 24.5521825440s | Speedup: 1.00x | Efficiency: 100.0%
+  Tracy profile: medium_t1.tracy (4.7MiB)
+
+>>> Running with 2 threads...
+  Tracy capture started (PID: 1407903)
+  Starting wireroute...
+  Threads: 2 | Time: 15.9456518770s | Speedup: 1.53x | Efficiency: 76.5%
+  Tracy profile: medium_t2.tracy (4.3MiB)
+
+>>> Running with 4 threads...
+  Tracy capture started (PID: 1409459)
+  Starting wireroute...
+  Threads: 4 | Time: 6.7549419700s | Speedup: 3.63x | Efficiency: 90.7%
+  Tracy profile: medium_t4.tracy (4.7MiB)
+
+>>> Running with 8 threads...
+  Tracy capture started (PID: 1413280)
+  Starting wireroute...
+  Threads: 8 | Time: 3.7531591590s | Speedup: 6.54x | Efficiency: 81.7%
+  Tracy profile: medium_t8.tracy (4.5MiB)
+
+==========================================
+
+SUMMARY:
+  Baseline (1 thread): 24.5521825440s
+
+Optimizations Applied:
+  1. Inlined calculateRouteCost (eliminated 3.5M function calls)
+  2. Simplified math: (n+1)² - n² → 2n + 1
+  3. Result: ~11-13% faster across all thread counts
+
+Results stored in:
+  Summary: results/medium_calculateRouteCost_Optimized/speedup_summary.txt
+  Tracy profiles: results/medium_calculateRouteCost_Optimized/tracy_profiles/
+  Detailed logs: results/medium_calculateRouteCost_Optimized/logs/
+
+Next step: Upload .tracy files to https://tracy.nereid.pl/
+

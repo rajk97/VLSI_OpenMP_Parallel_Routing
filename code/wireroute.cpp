@@ -36,12 +36,10 @@ int calculateRouteCost(const Route& route, const std::vector<std::vector<int>>& 
   int incremental_cost = 0; 
 
   // Loop through all the points, add the incremental cost to the occupancy grid 
+  // Optimized: (n+1)² - n² = 2n + 1 (avoids 2 multiplications per point)
   for(const auto& point: all_points){
     int current_occupancy = occupancy[point.y][point.x];
-
-    int old_cost = current_occupancy * current_occupancy;
-    int new_cost = (current_occupancy + 1) * (current_occupancy + 1);
-    incremental_cost += (new_cost - old_cost);
+    incremental_cost += (2 * current_occupancy + 1);
   }
 
   return incremental_cost;
@@ -299,19 +297,35 @@ int main(int argc, char *argv[]) {
 #ifdef TRACY_ENABLE
           ZoneScopedN("Phase 1 - Find Initial Routes");
 #endif 
+        // Thread-local buffer to avoid repeated allocations
+        std::vector<Wire::Point> point_buffer;
+        point_buffer.reserve(1000);  // Reserve space for typical route
+        
         for(int wire_idx = batch_start; wire_idx<=batch_end; wire_idx++){
           auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
           Route best_route = candidates[0];
-          int min_cost = calculateRouteCost(best_route, occupancy);
+          auto best_points = best_route.getAllPoints(dim_x, dim_y);
+          
+          // Calculate cost inline for better performance
+          int min_cost = 0;
+          for(const auto& point: best_points){
+            int curr_occ = occupancy[point.y][point.x];
+            min_cost += (2 * curr_occ + 1);
+          }
 
           for(size_t i = 1; i < candidates.size(); ++i){
-            int cost = calculateRouteCost(candidates[i], occupancy);
+            auto curr_points = candidates[i].getAllPoints(dim_x, dim_y);
+            int cost = 0;
+            for(const auto& point: curr_points){
+              int curr_occ = occupancy[point.y][point.x];
+              cost += (2 * curr_occ + 1);
+            }
+            
             if(cost < min_cost){
               min_cost = cost; 
               best_route = candidates[i];
             }
-            
           }
           wires[wire_idx].route_path = best_route.getAllPoints(dim_x, dim_y);
         }
@@ -392,15 +406,27 @@ int main(int argc, char *argv[]) {
             auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
             Route best_route = candidates[0];
-            int min_cost = calculateRouteCost(best_route, occupancy);
+            auto best_points = best_route.getAllPoints(dim_x, dim_y);
+            
+            // Calculate cost inline for better performance
+            int min_cost = 0;
+            for(const auto& point: best_points){
+              int curr_occ = occupancy[point.y][point.x];
+              min_cost += (2 * curr_occ + 1);
+            }
 
             for(size_t i = 1; i < candidates.size(); ++i){
-              int cost = calculateRouteCost(candidates[i], occupancy);
+              auto curr_points = candidates[i].getAllPoints(dim_x, dim_y);
+              int cost = 0;
+              for(const auto& point: curr_points){
+                int curr_occ = occupancy[point.y][point.x];
+                cost += (2 * curr_occ + 1);
+              }
+              
               if(cost < min_cost){
                 min_cost = cost; 
                 best_route = candidates[i];
               }
-              
             }
 
             Route selected_route = best_route; 

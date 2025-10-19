@@ -1,0 +1,51 @@
+Hard 4096 Speedup Analysis
+Experiment: hard_optimized
+Date: Sat Oct 18 02:28:26 PM PDT 2025
+==========================================
+
+Configuration:
+  Input: inputs/timeinput/hard_4096.txt
+  Threads: 1 2 4 8
+  SA Iterations: 5
+  Batch Size: 1
+  Parallel Mode: A (across-wire)
+  Compiler: Optimized build (march=native, flto, ffast-math)
+
+==========================================
+
+>>> Running with 1 threads...
+  Tracy capture started (PID: 1245504)
+  Starting wireroute...
+  Threads: 1 | Time: 53.9349736900s | Speedup: 1.00x
+  Tracy profile: hard_t1.tracy (25MiB)
+
+>>> Running with 2 threads...
+  Tracy capture started (PID: 1247916)
+  Starting wireroute...
+  Threads: 2 | Time: 23.9876963660s | Speedup: 2.24x
+  Tracy profile: hard_t2.tracy (26MiB)
+
+>>> Running with 4 threads...
+  Tracy capture started (PID: 1248291)
+  Starting wireroute...
+  Threads: 4 | Time: 12.0751109730s | Speedup: 4.46x
+  Tracy profile: hard_t4.tracy (26MiB)
+
+>>> Running with 8 threads...
+  Tracy capture started (PID: 1248552)
+  Starting wireroute...
+  Threads: 8 | Time: 6.7567426620s | Speedup: 7.98x
+  Tracy profile: hard_t8.tracy (26MiB)
+
+==========================================
+
+SUMMARY:
+  Baseline (1 thread): 53.9349736900s
+
+Results stored in:
+  Summary: results/hard_optimized/speedup_summary.txt
+  Tracy profiles: results/hard_optimized/tracy_profiles/
+  Detailed logs: results/hard_optimized/logs/
+
+Next step: Upload .tracy files to https://tracy.nereid.pl/
+

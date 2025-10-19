@@ -1,0 +1,28 @@
+Performance Mode Benchmark Results
+Date: Sat Oct 18 04:36:32 PM PDT 2025
+CPU Governor: performance
+Thread Affinity: OMP_PROC_BIND=close, OMP_PLACES=cores
+==========================================
+
+>>> Running with 1 threads...
+  Threads: 1 | Time: 22.6932007620s | Speedup: 1.00x | Efficiency: 100.0%
+
+>>> Running with 2 threads...
+  Threads: 2 | Time: 12.2572419360s | Speedup: 1.85x | Efficiency: 92.5%
+
+>>> Running with 4 threads...
+  Threads: 4 | Time: 6.0899276600s | Speedup: 3.72x | Efficiency: 93.0%
+
+>>> Running with 8 threads...
+  Threads: 8 | Time: 3.4577749170s | Speedup: 6.56x | Efficiency: 82.0%
+
+==========================================
+
+SUMMARY:
+  Baseline (1 thread): 22.6932007620s
+
+Optimizations applied:
+  - CPU Governor: performance mode
+  - Thread Affinity: close binding to physical cores
+  - Compiler: -O3 -march=native -flto -ffast-math
+

@@ -1,0 +1,46 @@
+Medium 4096 Speedup Analysis
+Experiment: t1
+Date: Sat Oct 18 01:30:19 PM PDT 2025
+==========================================
+
+Configuration:
+  Input: inputs/timeinput/medium_4096.txt
+  Threads: 1 2 4 8
+  SA Iterations: 5
+  Batch Size: 1
+  Parallel Mode: A (across-wire)
+
+==========================================
+
+>>> Running with 1 threads...
+  Starting wireroute...
+  Threads: 1 | Time: 35.2233875510s | Speedup: 1.00x
+  Tracy profile: medium_t1.tracy (17MiB)
+
+>>> Running with 2 threads...
+  Starting wireroute...
+  Threads: 2 | Time: 18.3116577970s | Speedup: 1.92x
+  Tracy profile: medium_t2.tracy (17MiB)
+
+>>> Running with 4 threads...
+  Starting wireroute...
+  Threads: 4 | Time: 9.2722043060s | Speedup: 3.79x
+  Tracy profile: medium_t4.tracy (17MiB)
+
+>>> Running with 8 threads...
+  Starting wireroute...
+  Threads: 8 | Time: 5.4080491760s | Speedup: 6.51x
+  Tracy profile: medium_t8.tracy (17MiB)
+
+==========================================
+
+SUMMARY:
+  Baseline (1 thread): 35.2233875510s
+
+Results stored in:
+  Summary: results/t1/speedup_summary.txt
+  Tracy profiles: results/t1/tracy_profiles/
+  Detailed logs: results/t1/logs/
+
+Next step: Upload .tracy files to https://tracy.nereid.pl/
+
