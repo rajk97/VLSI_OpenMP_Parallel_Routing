@@ -1,0 +1,162 @@
+Cache Miss Data Collection
+==========================
+Date: Mon Oct 20 06:15:26 AM PDT 2025
+Input: inputs/timeinput/medium_4096.txt
+Mode: A (across-wire)
+
+
+>>> Threads: 1
+----------------------------
+Number of threads: 1
+Simulated annealing probability parameter: 0.1
+Simulated annealing iterations: 5
+Input file: inputs/timeinput/medium_4096.txt
+Parallel mode: A
+Batch size: 1
+Initialization time (sec): 0.0272450320
+SA Iteration 1/5
+SA Iteration 2/5
+SA Iteration 3/5
+SA Iteration 4/5
+SA Iteration 5/5
+Computation time (sec): 29.5311937470
+Max occupancy: 3
+Total cost: 602963
+
+ Performance counter stats for './wireroute -f inputs/timeinput/medium_4096.txt -n 1 -i 5 -m A -b 1':
+
+       169,487,171      cpu_atom/cache-misses:u/         #   83.62% of all cache refs           (74.74%)
+       386,410,619      cpu_core/cache-misses:u/         #   78.87% of all cache refs           (25.26%)
+       202,676,490      cpu_atom/cache-references:u/                                            (74.74%)
+       489,953,172      cpu_core/cache-references:u/                                            (25.26%)
+            41,660      cpu_atom/LLC-load-misses:u/      #    0.04% of all LL-cache accesses    (74.74%)
+        52,931,822      cpu_core/LLC-load-misses:u/      #   86.69% of all LL-cache accesses    (25.26%)
+        95,001,528      cpu_atom/LLC-loads:u/                                                   (74.74%)
+        61,060,010      cpu_core/LLC-loads:u/                                                   (25.26%)
+
+      30.434643765 seconds time elapsed
+
+      28.751607000 seconds user
+       0.127378000 seconds sys
+
+
+
+========================================
+
+
+>>> Threads: 2
+----------------------------
+Number of threads: 2
+Simulated annealing probability parameter: 0.1
+Simulated annealing iterations: 5
+Input file: inputs/timeinput/medium_4096.txt
+Parallel mode: A
+Batch size: 1
+Initialization time (sec): 0.0299282890
+SA Iteration 1/5
+SA Iteration 2/5
+SA Iteration 3/5
+SA Iteration 4/5
+SA Iteration 5/5
+Computation time (sec): 14.6198666980
+Max occupancy: 3
+Total cost: 603057
+
+ Performance counter stats for './wireroute -f inputs/timeinput/medium_4096.txt -n 2 -i 5 -m A -b 1':
+
+       159,930,734      cpu_atom/cache-misses:u/         #   78.00% of all cache refs           (68.01%)
+       346,230,081      cpu_core/cache-misses:u/         #   74.46% of all cache refs           (33.99%)
+       205,042,950      cpu_atom/cache-references:u/                                            (68.01%)
+       464,983,325      cpu_core/cache-references:u/                                            (33.99%)
+            41,549      cpu_atom/LLC-load-misses:u/      #    0.04% of all LL-cache accesses    (68.01%)
+        46,109,706      cpu_core/LLC-load-misses:u/      #   79.24% of all LL-cache accesses    (33.99%)
+        96,175,931      cpu_atom/LLC-loads:u/                                                   (68.01%)
+        58,186,732      cpu_core/LLC-loads:u/                                                   (33.99%)
+
+      15.588216702 seconds time elapsed
+
+      28.010122000 seconds user
+       0.134252000 seconds sys
+
+
+
+========================================
+
+
+>>> Threads: 4
+----------------------------
+Number of threads: 4
+Simulated annealing probability parameter: 0.1
+Simulated annealing iterations: 5
+Input file: inputs/timeinput/medium_4096.txt
+Parallel mode: A
+Batch size: 1
+Initialization time (sec): 0.0312216770
+SA Iteration 1/5
+SA Iteration 2/5
+SA Iteration 3/5
+SA Iteration 4/5
+SA Iteration 5/5
+Computation time (sec): 7.7397302670
+Max occupancy: 3
+Total cost: 603485
+
+ Performance counter stats for './wireroute -f inputs/timeinput/medium_4096.txt -n 4 -i 5 -m A -b 1':
+
+       146,030,310      cpu_atom/cache-misses:u/         #   73.11% of all cache refs           (70.54%)
+       302,378,771      cpu_core/cache-misses:u/         #   67.37% of all cache refs           (35.05%)
+       199,746,303      cpu_atom/cache-references:u/                                            (70.54%)
+       448,862,818      cpu_core/cache-references:u/                                            (35.05%)
+            42,816      cpu_atom/LLC-load-misses:u/      #    0.05% of all LL-cache accesses    (70.54%)
+        40,268,063      cpu_core/LLC-load-misses:u/      #   70.17% of all LL-cache accesses    (35.05%)
+        94,254,364      cpu_atom/LLC-loads:u/                                                   (70.54%)
+        57,383,761      cpu_core/LLC-loads:u/                                                   (35.05%)
+
+       8.575638698 seconds time elapsed
+
+      28.865880000 seconds user
+       0.145987000 seconds sys
+
+
+
+========================================
+
+
+>>> Threads: 8
+----------------------------
+Number of threads: 8
+Simulated annealing probability parameter: 0.1
+Simulated annealing iterations: 5
+Input file: inputs/timeinput/medium_4096.txt
+Parallel mode: A
+Batch size: 1
+Initialization time (sec): 0.0298500580
+SA Iteration 1/5
+SA Iteration 2/5
+SA Iteration 3/5
+SA Iteration 4/5
+SA Iteration 5/5
+Computation time (sec): 4.0792680010
+Max occupancy: 3
+Total cost: 614565
+
+ Performance counter stats for './wireroute -f inputs/timeinput/medium_4096.txt -n 8 -i 5 -m A -b 1':
+
+       124,061,822      cpu_atom/cache-misses:u/         #   64.80% of all cache refs           (59.38%)
+       277,790,879      cpu_core/cache-misses:u/         #   61.13% of all cache refs           (46.76%)
+       191,446,192      cpu_atom/cache-references:u/                                            (59.38%)
+       454,433,962      cpu_core/cache-references:u/                                            (46.76%)
+            44,388      cpu_atom/LLC-load-misses:u/      #    0.05% of all LL-cache accesses    (59.38%)
+        36,241,116      cpu_core/LLC-load-misses:u/      #   63.70% of all LL-cache accesses    (46.76%)
+        88,459,868      cpu_atom/LLC-loads:u/                                                   (59.38%)
+        56,896,124      cpu_core/LLC-loads:u/                                                   (46.76%)
+
+       4.990878347 seconds time elapsed
+
+      27.741379000 seconds user
+       0.146189000 seconds sys
+
+
+
+========================================
+

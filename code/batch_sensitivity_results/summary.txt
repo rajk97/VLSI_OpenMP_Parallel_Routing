@@ -1,0 +1,56 @@
+Batch Size Sensitivity Study
+============================
+Date: Mon Oct 20 07:02:55 AM PDT 2025
+Input: inputs/timeinput/medium_4096.txt
+Threads: 8
+Iterations: 5
+
+Batch Sizes to test: 1 5 10 25 50 100
+
+========================================
+Testing batch_size = 1
+========================================
+  Computation time: 3.8800615500 s
+  Total cost: 615039
+  Max occupancy: 4
+
+========================================
+Testing batch_size = 5
+========================================
+  Computation time: 4.7187600420 s
+  Total cost: 640351
+  Max occupancy: 4
+
+========================================
+Testing batch_size = 10
+========================================
+  Computation time: 4.8012762660 s
+  Total cost: 653941
+  Max occupancy: 5
+
+========================================
+Testing batch_size = 25
+========================================
+  Computation time: 8.1380942620 s
+  Total cost: 675463
+  Max occupancy: 6
+
+========================================
+Testing batch_size = 50
+========================================
+  Computation time: 11.8022765580 s
+  Total cost: 658207
+  Max occupancy: 5
+
+========================================
+Testing batch_size = 100
+========================================
+  Computation time: 16.3883520220 s
+  Total cost: 674367
+  Max occupancy: 6
+
+========================================
+Data collection complete!
+Results saved to: batch_sensitivity_results/
+
+Next step: Run 'python3 plot_batch_sensitivity.py' to generate graphs
