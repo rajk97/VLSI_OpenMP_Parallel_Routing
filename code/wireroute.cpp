@@ -34,11 +34,11 @@ int calculateRouteCost(const Route& route, const std::vector<std::vector<int>>& 
     if(point.x >=0 && point.x < static_cast<int>(occupancy[0].size()) && 
        point.y >=0 && point.y < static_cast<int>(occupancy.size())){
       
-        int current_occupancy = occupancy[point.y][point.x];
+        int current_occupancy = occupancy[point.y][point.x]; // 1 memory read
 
-        int old_cost = current_occupancy * current_occupancy;
-        int new_cost = (current_occupancy + 1) * (current_occupancy + 1);
-        incremental_cost += (new_cost - old_cost);
+        int old_cost = current_occupancy * current_occupancy; // 1 multiply 
+        int new_cost = (current_occupancy + 1) * (current_occupancy + 1); // 2 ops
+        incremental_cost += (new_cost - old_cost); //2 ops 
     }   
   }
 
@@ -260,20 +260,22 @@ int main(int argc, char *argv[]) {
   // Phase 1: Initial greedy wire placement
   std::cout << "Phase 1: Initial wire placement..." << std::endl;
   
+  // WITHIN-WIRE APPROACH: Process wires sequentially, parallelize candidates within each wire
   for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx){
     auto candidates = enumerate_candidates(wires[wire_idx].start, wires[wire_idx].end);
 
     Route best_route = candidates[0];
     int min_cost = calculateRouteCost(best_route, occupancy);
 
+    // Parallelize candidate evaluation for THIS wire
     #pragma omp parallel
     {
       // Declare thread local variables 
       int thread_min_cost = min_cost; 
       Route thread_best_route = candidates[0];
 
-      // Write the thread local best route and cost functions 
-      #pragma omp for nowait
+      // Parallel loop over candidates for THIS wire
+      #pragma omp for schedule(dynamic)
       for(size_t i = 1; i<candidates.size(); ++i){
         int cost = calculateRouteCost(candidates[i], occupancy);
         if(cost < thread_min_cost){
@@ -281,6 +283,7 @@ int main(int argc, char *argv[]) {
           thread_best_route = candidates[i];
         }
       }
+      
       // Do a critical section to update the global best route and cost 
       #pragma omp critical 
       {
@@ -291,6 +294,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Update wire and occupancy (sequential, outside parallel region)
     wires[wire_idx] = best_route.toWire();
     updateOccupancyGrid(best_route, occupancy);
 
@@ -309,10 +313,9 @@ int main(int argc, char *argv[]) {
   for(int iter = 0; iter < SA_iters; ++iter) {
     std::cout << "SA Iteration " << (iter + 1) << "/" << SA_iters << std::endl;
     
+    // WITHIN-WIRE APPROACH: Process wires sequentially, parallelize candidates within each wire
     for(size_t wire_idx = 0; wire_idx < wires.size(); ++wire_idx) {
       
-      
-      // Remove current wire from occupancy matrix
       Route current_route(wires[wire_idx].start, wires[wire_idx].end);
       for(uint8_t i = 0; i < wires[wire_idx].num_bends; ++i) {
         current_route.bends.push_back(wires[wire_idx].bends[i]);
@@ -333,14 +336,15 @@ int main(int argc, char *argv[]) {
       Route best_route = candidates[0];
       int min_cost = calculateRouteCost(best_route, occupancy);
 
+      // Parallelize candidate evaluation for THIS wire
       #pragma omp parallel
       {
         // Declare thread local variables 
         int thread_min_cost = min_cost; 
         Route thread_best_route = candidates[0];
 
-        // Write the thread local best route and cost functions 
-        #pragma omp for nowait
+        // Parallel loop over candidates for THIS wire
+        #pragma omp for schedule(dynamic)
         for(size_t i = 1; i<candidates.size(); ++i){
           int cost = calculateRouteCost(candidates[i], occupancy);
           if(cost < thread_min_cost){
@@ -348,6 +352,7 @@ int main(int argc, char *argv[]) {
             thread_best_route = candidates[i];
           }
         }
+        
         // Do a critical section to update the global best route and cost 
         #pragma omp critical 
         {
@@ -362,8 +367,6 @@ int main(int argc, char *argv[]) {
       if(candidates.size() > 1 && prob_dist(gen) < SA_prob) {
         std::uniform_int_distribution<> route_dist(0, candidates.size() - 1);
         best_route = candidates[route_dist(gen)];
-      } else {
-        best_route = best_route;
       }
       
       // Update wire and occupancy with selected route
