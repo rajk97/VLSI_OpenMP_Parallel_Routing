@@ -11,11 +11,13 @@
 
 ## 🎯 The Challenge
 
-**Problem**: Route 595 wires through a 4096×4096 grid without collisions—a task that takes 30+ seconds sequentially.
+**Problem**: Given a 2D grid and a set of wire endpoints, route each wire using Manhattan-style paths (max 2 bends, 3 segments) within their bounding boxes. The goal is to minimize wire overlaps, as routing cost grows quadratically (N²) with the number of overlapping wires at each grid position.
 
-**Goal**: Parallelize the wire router to achieve near-linear speedup while maintaining solution quality.
+**Sequential Reality**: Routing 595 wires through a 4096×4096 grid takes 30+ seconds using simulated annealing optimization.
 
-**Real-World Impact**: Modern chips contain billions of wires. Faster routing = faster chip design = faster innovation.
+**Our Mission**: Parallelize the wire router using OpenMP to achieve near-linear speedup while maintaining solution quality.
+
+**Real-World Impact**: In VLSI chip design, minimizing overlaps reduces the number of metal layers needed in fabrication—fewer layers mean lower manufacturing costs. Modern chips contain billions of wires, so faster routing directly accelerates chip design cycles.
 
 ---
 
@@ -351,9 +353,9 @@ This project is part of CMU 15-418/618 coursework. All rights reserved by the co
 
 ## 👤 Author
 
-**Raj Kumar**  
-Graduate Student | Computer Science  
-Specialization: Parallel Computing & Performance Optimization
+**Raj Kolamuri**  
+Carnegie Mellon University - Mechanical Engineering (Graduate)  
+Specialization: Robotics & Computer Vision
 
 [![GitHub](https://img.shields.io/badge/GitHub-rajk97-black?logo=github)](https://github.com/rajk97)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?logo=linkedin)](https://linkedin.com/in/rajk97)
@@ -380,7 +382,6 @@ Specialization: Parallel Computing & Performance Optimization
 
 **⭐ If this helps your learning, consider starring the repo!**
 
-Made with ☕ and 🧠 at Carnegie Mellon University
 
 </div>
 
