@@ -1,0 +1,80 @@
+CMU NOtes about OpenMP:
+
+https://www.cs.cmu.edu/afs/cs/academic/class/15418-s24/www/doc/openmp.pdf
+
+OpenMP stands for OPen specifications for MultiProcessing. 
+
+Supports multithreaded and shared address space paralleism. 
+
+OpenMP uses fork-join model of parallel execution. 
+
+
+OpenMP API is comprised of three primary components:
+
+1. Compiler Directives: specify parallelism in the C source code. 
+
+2. Runtime Library Routines: provide access to various runtime parameters
+
+3. Environment Variables: direct how the runtime system should behave. 
+
+3. Compiler directives:
+
+1. Parallel construct 
+2. Work-sharing construct 
+3. Combined parallel work-sharing constructs
+4. Synchronization directives
+
+3.1 Parallel Construct 
+
+- region in code that is executed in parallel 
+
+Syntax:
+#pragma omp parallel [clause ...] {many parameters}
+
+- No. of threads in a parallel region is determined by the following factors:
+1. Use omp_set_num_threads() library function
+2. OMP_NUM_THREADS environment variable. 
+3. Implementation default
+
+3.2 Work-sharing constructs:
+
+- Work distribution amongst threads
+- Scheduling of 4 types: 
+    - static
+    - dynamic: when a thread finishes 1 chunk, it is dynamically assigned another chunk. 
+
+3.3 Combined parallel work-sharing constructs:
+
+- Combined parallel working-sharing constructs are shortcuts for specifying a parallel region that contains only one work-sharing construct. THe semantics of these directives are identical to the case of explicitly specifying a parallel directive followed by a single work-sharing construct. 
+
+3.4 Synchronization directives:
+
+#pragma omp master: only the master thread executes, not the team threads. 
+
+#pragma omp critical: only one thread at a time should execute this block of the code
+
+#pragma omp barrier: when a barrier directive is reached, a thread will wait at that point until all other threads have reached that barrier. 
+
+#pragma omp atomic: only atomic updates allowed rather than letting multiple threads attempt to write to it. 
+
+#pragma omp ordered: execute in the same order as if in a serial order
+
+3.5 Data scope attribute clauses 
+
+OpenMP is based on shared address space programming model --> most variables are shared by default. 
+
+Private variables: loop index variables, stack variables in subroutines called from parallel regions. 
+
+In addition, data scope attribute clauses can be used to explicitly define how variables should be scoped. They include PRIVATE, FIRSTPRIVATE, LASTPRIVATE, SHARED, DEFAULT, REDUCTION AND COPYIN. 
+
+4. Runtime Library Routines 
+
+Have some commands for assignment help 
+
+https://hpc-tutorials.llnl.gov/openmp/
+
+Tutorials but didn't do them
+
+http://jakascorner.com/blog/2016/06/omp-for-scheduling.html
+
+Scheduling stuff 

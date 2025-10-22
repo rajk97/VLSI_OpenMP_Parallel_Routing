@@ -1,4 +1,5 @@
 {
+    "window.title": "base_sequential",
     "files.associations": {
         "algorithm": "cpp",
         "iomanip": "cpp",
